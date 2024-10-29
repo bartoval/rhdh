@@ -1,0 +1,99 @@
+{
+  "name": "app-next",
+  "version": "0.0.17",
+  "backstage": {
+    "role": "frontend"
+  },
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/backstage/backstage",
+    "directory": "packages/app-next"
+  },
+  "license": "Apache-2.0",
+  "files": [
+    "dist",
+    "config.d.ts"
+  ],
+  "configSchema": "config.d.ts",
+  "scripts": {
+    "build": "EXPERIMENTAL_MODULE_FEDERATION=true backstage-cli package build",
+    "clean": "backstage-cli package clean",
+    "lint": "backstage-cli package lint",
+    "start": "backstage-cli package start --config ../../app-config.yaml --config app-config.yaml",
+    "test": "backstage-cli package test"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "dependencies": {
+    "@backstage/app-defaults": "1.5.12",
+    "@backstage/catalog-model": "1.7.0",
+    "@backstage/cli": "0.28.1",
+    "@backstage/config": "1.2.0",
+    "@backstage/core-app-api": "1.15.1",
+    "@backstage/core-compat-api": "0.3.1",
+    "@backstage/core-components": "0.15.1",
+    "@backstage/core-plugin-api": "1.10.0",
+    "@backstage/frontend-app-api": "0.10.0",
+    "@backstage/frontend-defaults": "0.1.1",
+    "@backstage/frontend-plugin-api": "0.9.0",
+    "@backstage/integration-react": "1.2.0",
+    "@backstage/plugin-api-docs": "0.11.11",
+    "@backstage/plugin-app": "0.1.1",
+    "@backstage/plugin-app-visualizer": "0.1.11",
+    "@backstage/plugin-auth-react": "0.1.7",
+    "@backstage/plugin-catalog": "1.24.0",
+    "@backstage/plugin-catalog-common": "1.1.0",
+    "@backstage/plugin-catalog-graph": "0.4.11",
+    "@backstage/plugin-catalog-import": "0.12.5",
+    "@backstage/plugin-catalog-react": "1.14.0",
+    "@backstage/plugin-org": "0.6.31",
+    "@backstage/plugin-permission-react": "0.4.27",
+    "@backstage/plugin-scaffolder": "1.26.2",
+    "@backstage/plugin-scaffolder-react": "1.13.2",
+    "@backstage/plugin-search": "1.4.18",
+    "@backstage/plugin-search-common": "1.2.14",
+    "@backstage/plugin-search-react": "1.8.1",
+    "@backstage/plugin-user-settings": "0.8.14",
+    "@backstage/theme": "0.6.0",
+    "@backstage/version-bridge": "1.0.10",
+    "@internal/app-utils": "*",
+    "@material-ui/core": "^4.12.2",
+    "@material-ui/icons": "^4.9.1",
+    "@material-ui/lab": "4.0.0-alpha.61",
+    "@module-federation/enhanced": "^0.6.0",
+    "@octokit/rest": "^19.0.3",
+    "@scalprum/core": "0.7.0",
+    "@scalprum/react-core": "0.8.0",
+    "history": "^5.0.0",
+    "react": "^18.0.2",
+    "react-dom": "^18.0.2",
+    "react-router": "^6.3.0",
+    "react-router-dom": "^6.3.0",
+    "react-use": "^17.2.4",
+    "zen-observable": "^0.10.0"
+  },
+  "devDependencies": {
+    "@backstage/test-utils": "^1.7.0",
+    "@testing-library/dom": "^10.0.0",
+    "@testing-library/jest-dom": "^6.0.0",
+    "@testing-library/react": "^16.0.0",
+    "@testing-library/user-event": "^14.0.0",
+    "@types/jquery": "^3.3.34",
+    "@types/react": "*",
+    "@types/react-dom": "*",
+    "@types/zen-observable": "^0.8.0",
+    "cross-env": "^7.0.0"
+  },
+  "bundled": true
+}

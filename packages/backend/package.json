@@ -9,6 +9,7 @@
   },
   "scripts": {
     "start": "backstage-cli package start --require ./src/instrumentation.js",
+    "start:next": "APP_CONFIG_app_packageName=app-next backstage-cli package start --require ./src/instrumentation.js",
     "start:prometheus": "docker run --mount type=bind,source=./prometheus.yml,destination=/etc/prometheus/prometheus.yml --publish published=9090,target=9090,protocol=tcp prom/prometheus",
     "build": "backstage-cli package build",
     "lint:check": "backstage-cli package lint",
@@ -56,6 +57,7 @@
     "@opentelemetry/instrumentation-runtime-node": "^0.9.0",
     "@opentelemetry/sdk-metrics": "^1.27.0",
     "@opentelemetry/sdk-node": "^0.53.0",
+    "app": "*",
     "app-next": "*",
     "global-agent": "3.0.0",
     "undici": "6.19.8",

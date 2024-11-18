@@ -16,6 +16,10 @@
       "cache": false,
       "persistent": true
     },
+    "start:next": {
+      "cache": false,
+      "persistent": true
+    },
     "build": {
       "outputs": ["dist/**"],
       "dependsOn": ["^build", "tsc", "export-dynamic"]

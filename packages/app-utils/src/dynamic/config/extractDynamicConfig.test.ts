@@ -1,10 +1,11 @@
 import { Entity } from '@backstage/catalog-model';
 
-import extractDynamicConfig, {
-  conditionsArrayMapper,
+import { conditionsArrayMapper } from '../utils';
+import {
   configIfToCallable,
-  DynamicPluginConfig,
+  extractDynamicConfig,
 } from './extractDynamicConfig';
+import { DynamicPluginConfig } from './types';
 
 describe('conditionsArrayMapper', () => {
   it.each([

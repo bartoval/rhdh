@@ -1,11 +1,10 @@
+import { MountPointConfig } from '@internal/app-utils';
 import { getScalprum } from '@scalprum/core';
-
-import { ScalprumMountPointConfig } from '../../components/DynamicRoot/DynamicRootContext';
 
 function getMountPointData<T = any, T2 = any>(
   mountPoint: string,
 ): {
-  config: ScalprumMountPointConfig;
+  config: MountPointConfig;
   Component: T;
   staticJSXContent: T2;
 }[] {

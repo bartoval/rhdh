@@ -1,8 +1,4 @@
-import {
-  FrontendConfig,
-  MenuItem,
-  MenuItemConfig,
-} from './extractDynamicConfig';
+import { FrontendConfig, MenuItem, MenuItemConfig } from './types';
 
 export function getNameFromPath(path: string): string {
   const trimmedPath = path.trim();

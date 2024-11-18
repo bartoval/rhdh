@@ -1,169 +1,29 @@
 import { Entity } from '@backstage/catalog-model';
 import { ApiHolder } from '@backstage/core-plugin-api';
-import { isKind } from '@backstage/plugin-catalog';
 
-import { hasAnnotation, isType } from '../../components/catalog/utils';
+import { conditionsArrayMapper } from '../utils';
+import { extractMenuItems } from './extractMenuItems';
 import {
-  DynamicModuleEntry,
+  ApiFactory,
+  AppIcon,
+  BindingTarget,
+  DynamicConfig,
+  DynamicPluginConfig,
+  DynamicRoute,
+  EntityTabEntry,
+  MountPoint,
+  MountPointConfigRawIf,
+  PluginModule,
   RouteBinding,
-  ScalprumMountPointConfigRaw,
-  ScalprumMountPointConfigRawIf,
-} from '../../components/DynamicRoot/DynamicRootContext';
-import { extractMenuItems } from './extractDynamicConfigFrontend';
-
-export type DynamicRouteMenuItem =
-  | {
-      text: string;
-      icon: string;
-      parent?: string;
-      priority?: number;
-    }
-  | {
-      module?: string;
-      importName: string;
-      config?: {
-        props?: Record<string, any>;
-      };
-    };
-
-export type MenuItemConfig = {
-  icon?: string;
-  title?: string;
-  priority?: number;
-  parent?: string;
-};
-
-export type MenuItem = {
-  name: string;
-  title: string;
-  icon: string;
-  children: MenuItem[];
-  priority?: number;
-  to?: string;
-  parent?: string;
-};
-
-export type DynamicRoute = {
-  scope: string;
-  module: string;
-  importName: string;
-  path: string;
-  menuItem?: DynamicRouteMenuItem;
-  config?: {
-    props?: Record<string, any>;
-  };
-};
-
-type PluginModule = {
-  scope: string;
-  module: string;
-};
-
-type MountPoint = {
-  scope: string;
-  mountPoint: string;
-  module: string;
-  importName: string;
-  config?: ScalprumMountPointConfigRaw;
-};
-
-type AppIcon = {
-  scope: string;
-  name: string;
-  module: string;
-  importName: string;
-};
-
-type BindingTarget = {
-  scope: string;
-  name: string;
-  module: string;
-  importName: string;
-};
-
-type ApiFactory = {
-  scope: string;
-  module: string;
-  importName: string;
-};
-
-type ScaffolderFieldExtension = {
-  scope: string;
-  module: string;
-  importName: string;
-};
-
-type EntityTab = {
-  mountPoint: string;
-  path: string;
-  title: string;
-};
-
-type EntityTabEntry = {
-  scope: string;
-  mountPoint: string;
-  path: string;
-  title: string;
-};
-
-type ThemeEntry = {
-  scope: string;
-  module: string;
-  id: string;
-  title: string;
-  variant: 'light' | 'dark';
-  icon: string;
-  importName: string;
-};
-
-type CustomProperties = {
-  pluginModule?: string;
-  dynamicRoutes?: (DynamicModuleEntry & {
-    importName?: string;
-    module?: string;
-    path: string;
-    menuItem?: DynamicRouteMenuItem;
-  })[];
-  menuItems?: { [key: string]: MenuItemConfig };
-  routeBindings?: {
-    targets: BindingTarget[];
-    bindings: RouteBinding[];
-  };
-  entityTabs?: EntityTab[];
-  mountPoints?: MountPoint[];
-  appIcons?: AppIcon[];
-  apiFactories?: ApiFactory[];
-  scaffolderFieldExtensions?: ScaffolderFieldExtension[];
-  themes?: ThemeEntry[];
-};
-
-export type FrontendConfig = {
-  [key: string]: CustomProperties;
-};
-
-export type DynamicPluginConfig = {
-  frontend?: FrontendConfig;
-};
-
-type DynamicConfig = {
-  pluginModules: PluginModule[];
-  apiFactories: ApiFactory[];
-  appIcons: AppIcon[];
-  dynamicRoutes: DynamicRoute[];
-  menuItems: MenuItem[];
-  entityTabs: EntityTabEntry[];
-  mountPoints: MountPoint[];
-  routeBindings: RouteBinding[];
-  routeBindingTargets: BindingTarget[];
-  scaffolderFieldExtensions: ScaffolderFieldExtension[];
-  themes: ThemeEntry[];
-};
+  ScaffolderFieldExtension,
+  ThemeEntry,
+} from './types';
 
 /**
  * Converts the dynamic plugin configuration structure to the data structure
  * required by the dynamic UI, substituting in any defaults as needed
  */
-function extractDynamicConfig(
+export function extractDynamicConfig(
   dynamicPlugins: DynamicPluginConfig = { frontend: {} },
 ) {
   const frontend = dynamicPlugins.frontend || {};
@@ -313,7 +173,7 @@ function extractDynamicConfig(
  * @param conditional
  * @returns
  */
-export function configIfToCallable(conditional: ScalprumMountPointConfigRawIf) {
+export function configIfToCallable(conditional: MountPointConfigRawIf) {
   return (entity: Entity, context?: { apis: ApiHolder }) => {
     if (conditional?.allOf) {
       return conditional.allOf
@@ -335,28 +195,3 @@ export function configIfToCallable(conditional: ScalprumMountPointConfigRawIf) {
     return true;
   };
 }
-
-export function conditionsArrayMapper(
-  condition:
-    | {
-        [key: string]: string | string[];
-      }
-    | Function,
-): (entity: Entity, context?: { apis: ApiHolder }) => boolean {
-  if (typeof condition === 'function') {
-    return (entity: Entity, context?: { apis: ApiHolder }): boolean =>
-      condition(entity, context);
-  }
-  if (condition.isKind) {
-    return isKind(condition.isKind);
-  }
-  if (condition.isType) {
-    return isType(condition.isType);
-  }
-  if (condition.hasAnnotation) {
-    return hasAnnotation(condition.hasAnnotation as string);
-  }
-  return () => false;
-}
-
-export default extractDynamicConfig;

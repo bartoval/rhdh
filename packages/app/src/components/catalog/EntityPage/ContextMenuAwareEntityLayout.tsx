@@ -2,8 +2,9 @@ import React, { ReactNode, useMemo, useState } from 'react';
 
 import { EntityLayout } from '@backstage/plugin-catalog';
 
+import { MenuIcon } from '@internal/app-utils';
+
 import getMountPointData from '../../../utils/dynamicUI/getMountPointData';
-import { MenuIcon } from '../../Root/MenuIcon';
 
 const makeIcon = (iconName: string) => () => <MenuIcon icon={iconName} />;
 

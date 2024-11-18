@@ -14,6 +14,7 @@ import { usePermission } from '@backstage/plugin-permission-react';
 import { SidebarSearchModal } from '@backstage/plugin-search';
 import { Settings as SidebarSettings } from '@backstage/plugin-user-settings';
 
+import { MenuIcon, ResolvedMenuItem } from '@internal/app-utils';
 import { AdminIcon } from '@internal/plugin-dynamic-plugins-info';
 import AccountCircleOutlinedIcon from '@mui/icons-material/AccountCircleOutlined';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -28,10 +29,7 @@ import { makeStyles } from 'tss-react/mui';
 
 import { policyEntityReadPermission } from '@janus-idp/backstage-plugin-rbac-common';
 
-import DynamicRootContext, {
-  ResolvedMenuItem,
-} from '../DynamicRoot/DynamicRootContext';
-import { MenuIcon } from './MenuIcon';
+import DynamicRootContext from '../DynamicRoot/DynamicRootContext';
 import { SidebarLogo } from './SidebarLogo';
 
 const useStyles = makeStyles()({

@@ -5,31 +5,30 @@ import { createApp } from '@backstage/app-defaults';
 import { BackstageApp } from '@backstage/core-app-api';
 import { AnyApiFactory, BackstagePlugin } from '@backstage/core-plugin-api';
 
-import { useThemes } from '@redhat-developer/red-hat-developer-hub-theme';
-import { AppsConfig } from '@scalprum/core';
-import { useScalprum } from '@scalprum/react-core';
-
-import bindAppRoutes from '../../utils/dynamicUI/bindAppRoutes';
-import extractDynamicConfig, {
+import {
+  AppThemeProvider,
+  bindAppRoutes,
   configIfToCallable,
   DynamicPluginConfig,
   DynamicRoute,
-} from '../../utils/dynamicUI/extractDynamicConfig';
-import initializeRemotePlugins from '../../utils/dynamicUI/initializeRemotePlugins';
-import { MenuIcon } from '../Root/MenuIcon';
-import CommonIcons from './CommonIcons';
-import defaultAppComponents from './defaultAppComponents';
-import DynamicRootContext, {
-  AppThemeProvider,
-  ComponentRegistry,
   EntityTabOverrides,
+  extractDynamicConfig,
+  MenuIcon,
+  MountPointConfig,
   MountPoints,
   RemotePlugins,
   ResolvedDynamicRoute,
   ResolvedDynamicRouteMenuItem,
-  ScaffolderFieldExtension,
-  ScalprumMountPointConfig,
-} from './DynamicRootContext';
+  ResolvedScaffolderFieldExtension,
+} from '@internal/app-utils';
+import { useThemes } from '@redhat-developer/red-hat-developer-hub-theme';
+import { AppsConfig } from '@scalprum/core';
+import { useScalprum } from '@scalprum/react-core';
+
+import initializeRemotePlugins from '../../utils/dynamicUI/initializeRemotePlugins';
+import CommonIcons from './CommonIcons';
+import defaultAppComponents from './defaultAppComponents';
+import DynamicRootContext, { ComponentRegistry } from './DynamicRootContext';
 import Loader from './Loader';
 
 export type StaticPlugins = Record<
@@ -214,7 +213,7 @@ export const DynamicRoot = ({
       {
         mountPoint: string;
         Component: React.ComponentType<{}>;
-        config?: ScalprumMountPointConfig;
+        config?: MountPointConfig;
         staticJSXContent?: React.ReactNode;
       }[]
     >((acc, { module, importName, mountPoint, scope, config }) => {
@@ -346,7 +345,7 @@ export const DynamicRoot = ({
     );
 
     const scaffolderFieldExtensionComponents = scaffolderFieldExtensions.reduce<
-      ScaffolderFieldExtension[]
+      ResolvedScaffolderFieldExtension[]
     >((acc, { scope, module, importName }) => {
       const extensionComponent = allPlugins[scope]?.[module]?.[importName];
       if (extensionComponent) {

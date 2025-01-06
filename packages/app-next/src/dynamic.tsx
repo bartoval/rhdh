@@ -82,68 +82,6 @@ export const dynamicFrontendFeaturesLoader: CreateAppFeatureLoader = {
               eager: true,
             },
           },
-/*
-          '@backstage/version-bridge': {
-            scope: 'default',
-            version: (await import('@backstage/version-bridge/package.json')).version,
-            lib: () => import('@backstage/version-bridge'),
-            shareConfig: {
-              singleton: true,
-              requiredVersion: (await import('@backstage/version-bridge/package.json')).version,
-              eager: true,
-            }
-          },
-          '@backstage/core-app-api': {
-            scope: 'default',
-            version: (await import('@backstage/core-app-api/package.json')).version,
-            lib: () => import('@backstage/core-app-api'),
-            shareConfig: {
-              singleton: true,
-              requiredVersion: (await import('@backstage/core-app-api/package.json')).version,
-              eager: true,
-            }
-          },
-          '@backstage/core-plugin-api': {
-            scope: 'default',
-            version: (await import('@backstage/core-plugin-api/package.json')).version,
-            lib: () => import('@backstage/core-plugin-api'),
-            shareConfig: {
-              singleton: true,
-              requiredVersion: (await import('@backstage/core-plugin-api/package.json')).version,
-              eager: true,
-            }
-          },
-          '@backstage/frontend-plugin-api': {
-            scope: 'default',
-            version: (await import('@backstage/frontend-plugin-api/package.json')).version,
-            lib: () => import('@backstage/frontend-plugin-api'),
-            shareConfig: {
-              singleton: true,
-              requiredVersion: (await import('@backstage/frontend-plugin-api/package.json')).version,
-              eager: true,
-            }
-          },
-          '@backstage/frontend-app-api': {
-            scope: 'default',
-            version: (await import('@backstage/frontend-app-api/package.json')).version,
-            lib: () => import('@backstage/frontend-app-api'),
-            shareConfig: {
-              singleton: true,
-              requiredVersion: (await import('@backstage/frontend-app-api/package.json')).version,
-              eager: true,
-            }
-          },
-          '@backstage/core-compat-api': {
-            scope: 'default',
-            version: (await import('@backstage/core-compat-api/package.json')).version,
-            lib: () => import('@backstage/core-compat-api'),
-            shareConfig: {
-              singleton: true,
-              requiredVersion: (await import('@backstage/core-compat-api/package.json')).version,
-              eager: true,
-            }
-          },
-*/
         },
       });
 

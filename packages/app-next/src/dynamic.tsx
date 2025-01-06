@@ -14,23 +14,21 @@
  * limitations under the License.
  */
 
-import { AnyApiFactory, BackstagePlugin, IconComponent, createRouteRef } from '@backstage/core-plugin-api';
+import { AnyApiFactory, BackstagePlugin, IconComponent } from '@backstage/core-plugin-api';
 import { FrontendFeature } from '@backstage/frontend-app-api';
 import { CreateAppFeatureLoader } from '@backstage/frontend-defaults';
 import { DynamicConfig, DynamicModuleEntry, DynamicPluginConfig, RemotePlugins, extractDynamicConfig } from '@internal/app-utils';
 import { init, loadRemote, registerPlugins, registerRemotes } from '@module-federation/enhanced/runtime';
 import { compatWrapper, convertLegacyPageExtension, convertLegacyPlugin, convertLegacyRouteRef } from '@backstage/core-compat-api';
-import { AnyRoutes, ApiBlueprint, ExtensionDefinition, NavItemBlueprint, RouteRef, createFrontendPlugin } from '@backstage/frontend-plugin-api';
+import { AnyRoutes, ApiBlueprint, ExtensionDefinition, NavItemBlueprint, createFrontendPlugin } from '@backstage/frontend-plugin-api';
 import {
-  BackstagePlugin as LegacyBackstagePlugin,
   RouteRef as LegacyRouteRef,
   getComponentData,
 } from '@backstage/core-plugin-api';
 import { ComponentType, ReactNode } from 'react';
 import React from 'react';
 import { MenuIcon } from '@internal/app-utils';
-import { initialize } from '@scalprum/core';
-
+import { NavComponentBlueprint, customAppPlugin } from './NavBar';
 
 export const dynamicFrontendFeaturesLoader: CreateAppFeatureLoader = {
   getLoaderName() {
@@ -109,7 +107,8 @@ export const dynamicFrontendFeaturesLoader: CreateAppFeatureLoader = {
           console.warn(
             `loadShare Args: ${args}`,
           );
-        }
+        },
+
       }]);
 
       const remotes = await Promise.all(Object.values(frontendPluginManifests).map(async m => {
@@ -202,49 +201,62 @@ export const dynamicFrontendFeaturesLoader: CreateAppFeatureLoader = {
 
         const routeRefs: AnyRoutes = {};
 
-        const pagesWithNavBarItems = Object.values(scopedConfig[scope])
+        const dynamicRouteItems = Object.values(scopedConfig[scope])
           .flatMap(cfg => cfg.dynamicRoutes.flatMap(r => {
             if (!r.menuItem) {
               return [undefined];
             }
             const Page = remotePlugins[r.scope][r.module][r.importName] as ComponentType<{ children?: ReactNode; }>;
             const element = <Page />;
-            const plugin = getComponentData<LegacyBackstagePlugin>(element, 'core.plugin');
-            let legacyRouteRef = getComponentData<LegacyRouteRef<undefined>>(
+            const legacyRouteRef = getComponentData<LegacyRouteRef<undefined>>(
               element,
               'core.mountPoint',
             );
-            if (!legacyRouteRef) {
-              legacyRouteRef = createRouteRef({
-                id: `${r.scope}-${r.module}-${r.importName}`,
-              });
+
+            const menuItemExtension: Array<ExtensionDefinition> = [];
+            if (r.menuItem && legacyRouteRef) {
+              const routeRef = convertLegacyRouteRef(legacyRouteRef);
+              routeRefs[r.importName] = routeRef;
+
+              if ('text' in r.menuItem!) {
+                const renderIcon = (iconName: string) => (() => compatWrapper(<MenuIcon icon={iconName} />)) as IconComponent;
+                menuItemExtension.push(NavItemBlueprint.make({
+                  params: {
+                    title: r.menuItem.text,
+                    icon: renderIcon(r.menuItem.icon),
+                    routeRef: routeRef,
+                  },
+                  attachTo: {
+                    id: 'app/nav',
+                    input: 'items',
+                  },
+                }));
+              } else {
+                const MenuItemComponent = remotePlugins[r.scope]?.[r.menuItem.module ?? r.module]?.[r.menuItem.importName];
+                if (MenuItemComponent !== undefined) {
+                  menuItemExtension.push(NavComponentBlueprint.make({
+                    params: {
+                      Component: MenuItemComponent as React.ComponentType<{}>, 
+                      routeRef: routeRef,
+                      config: r.menuItem?.config?.props,
+                    },
+                    attachTo: {
+                      id: 'app/nav',
+                      input: 'components',
+                    },
+                  }));
+                }
+              }
             }
-
-            const routeRef = convertLegacyRouteRef(legacyRouteRef);
-            routeRefs[r.importName] = routeRef;
-            const renderIcon = (iconName: string) => (() => compatWrapper(<MenuIcon icon={iconName} />)) as IconComponent;
-
             return [
-              NavItemBlueprint.make({
-                params: 'text' in r.menuItem! ? {
-                  title: r.menuItem.text,
-                  icon: renderIcon(r.menuItem.icon),
-                  routeRef: routeRef,
-                } : {
-                  title: `CustomNavBarItem-${plugin?.getId()}`,
-                  icon: renderIcon(''),
-                  routeRef: routeRef,
-                },
-                attachTo: {
-                  id: 'app/nav',
-                  input: 'items',
-                },
+              convertLegacyPageExtension(Page, {
+                defaultPath: r.path
               }),
-              convertLegacyPageExtension(Page),
+              ...menuItemExtension, 
             ];
           }));
 
-        const extensions = [...pagesWithNavBarItems].filter((e): e is ExtensionDefinition => e !== undefined);
+        const extensions = [...dynamicRouteItems].filter((e): e is ExtensionDefinition => e !== undefined);
         const plugin = backstagePlugins.length > 0 ?
           convertLegacyPlugin(backstagePlugins[0], {
             extensions,
@@ -257,6 +269,8 @@ export const dynamicFrontendFeaturesLoader: CreateAppFeatureLoader = {
 
         features.push(plugin);
       }
+
+      features.push(customAppPlugin);
 
       return { features: features };
     } catch (err) {

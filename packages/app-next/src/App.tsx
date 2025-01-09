@@ -17,6 +17,7 @@
 import { createApp } from '@backstage/frontend-defaults';
 
 import appVisualizerPlugin from '@backstage/plugin-app-visualizer';
+import catalogPlugin from '@backstage/plugin-catalog/alpha';
 import { dynamicFrontendFeaturesLoader } from './dynamic';
 
 /*
@@ -40,7 +41,7 @@ TODO:
 /* app.tsx */
 
 const app = createApp({
-  features: [appVisualizerPlugin, dynamicFrontendFeaturesLoader],
+  features: [appVisualizerPlugin, catalogPlugin, dynamicFrontendFeaturesLoader],
 });
 
 export default app.createRoot();

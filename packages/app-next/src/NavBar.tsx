@@ -61,7 +61,7 @@ const SidebarNavComponent = (
   };
   
   
-const customNavBar = appPlugin.getExtension('app/nav').override({    
+export const customNavBar = appPlugin.getExtension('app/nav').override({    
     inputs: {
         components: createExtensionInput([NavComponentBlueprint.dataRefs.target]),
     },
@@ -89,8 +89,4 @@ const customNavBar = appPlugin.getExtension('app/nav').override({
             ),
         ];
     }
-});
-
-export const customAppPlugin = appPlugin.withOverrides({
-  extensions: [customNavBar],
 });

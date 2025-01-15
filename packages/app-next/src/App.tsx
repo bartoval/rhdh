@@ -18,30 +18,16 @@ import { createApp } from '@backstage/frontend-defaults';
 
 import appVisualizerPlugin from '@backstage/plugin-app-visualizer';
 import catalogPlugin from '@backstage/plugin-catalog/alpha';
-import { dynamicFrontendFeaturesLoader } from './dynamic';
+import scaffolderPlugin from '@backstage/plugin-scaffolder/alpha';
+import userSettingsPlugin from '@backstage/plugin-user-settings/alpha';
+import { NewFrontendBridge } from './dynamic';
 
-/*
-
-# Notes
-
-TODO:
- - proper createApp
- - connect extensions and plugins, provide method?
- - higher level API for creating standard extensions + higher order framework API for creating those?
- - extension config schema + validation
- - figure out how to resolve configured extension ref to runtime value, e.g. '@backstage/plugin-graphiql#GraphiqlPage'
- - make sure all shorthands work + tests
- - figure out package structure / how to ship, frontend-plugin-api/frontend-app-api
- - figure out routing, useRouteRef in the new system
- - Legacy plugins / interop
- - dynamic updates, runtime API
-
-*/
-
-/* app.tsx */
+const newFrontendBridge = new NewFrontendBridge();
 
 const app = createApp({
-  features: [appVisualizerPlugin, catalogPlugin, dynamicFrontendFeaturesLoader],
+  features: [appVisualizerPlugin, catalogPlugin, scaffolderPlugin, newFrontendBridge, userSettingsPlugin],
+  configLoader: () => newFrontendBridge.configLoader(),
+  bindRoutes: (context) => newFrontendBridge.bindRoutes(context),
 });
 
 export default app.createRoot();

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The Backstage Authors
+ * Copyright 2024 The Backstage Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-import { AnyApiFactory, AnyExternalRoutes as LegacyAnyExternalRoutes, BackstagePlugin, IconComponent, AnyRoutes as LegacyAnyRoutes } from '@backstage/core-plugin-api';
-import { FrontendFeature } from '@backstage/frontend-app-api';
+import { AnyApiFactory, AnyExternalRoutes as LegacyAnyExternalRoutes, BackstagePlugin, IconComponent, AnyRoutes as LegacyAnyRoutes, ConfigApi, AnyRouteRefParams } from '@backstage/core-plugin-api';
+import { CreateAppRouteBinder, FrontendFeature } from '@backstage/frontend-app-api';
 import { CreateAppFeatureLoader } from '@backstage/frontend-defaults';
-import { DynamicConfig, DynamicModuleEntry, DynamicPluginConfig, RemotePlugins, extractDynamicConfig } from '@internal/app-utils';
+import { DynamicConfig, DynamicModuleEntry, DynamicPluginConfig, RemotePlugins, bindAppRoutes, extractDynamicConfig } from '@internal/app-utils';
 import { init, loadRemote, registerPlugins, registerRemotes } from '@module-federation/enhanced/runtime';
 import { compatWrapper, convertLegacyPageExtension, convertLegacyRouteRef, convertLegacyRouteRefs } from '@backstage/core-compat-api';
-import { AnyRoutes, ApiBlueprint, ExtensionDefinition, NavItemBlueprint, ThemeBlueprint, createFrontendPlugin } from '@backstage/frontend-plugin-api';
+import { AnyRoutes, ApiBlueprint, ExtensionDefinition, IconBundleBlueprint, NavItemBlueprint, ThemeBlueprint, createFrontendPlugin } from '@backstage/frontend-plugin-api';
 import {
   RouteRef as LegacyRouteRef,
   getComponentData,
@@ -28,25 +28,44 @@ import {
 import { ComponentType, ReactNode } from 'react';
 import React from 'react';
 import { MenuIcon } from '@internal/app-utils';
-import { NavComponentBlueprint, customAppPlugin } from './NavBar';
+import { NavComponentBlueprint, customNavBar } from './NavBar';
+import appPlugin from '@backstage/plugin-app';
+import { ConfigReader } from '@backstage/config';
+import { overrideBaseUrlConfigs } from '@internal/app-utils';
+import { AppRouteBinder, defaultConfigLoader } from '@backstage/core-app-api';
 
-export const dynamicFrontendFeaturesLoader: CreateAppFeatureLoader = {
+export class NewFrontendBridge implements CreateAppFeatureLoader {
+  #dynamicPluginsConfig?: DynamicConfig;
+  #remotePlugins: RemotePlugins = {};
+
   getLoaderName() {
     return 'dynamic-plugins-loader';
-  },
+  }
 
-  async load({ config }) {
+  async configLoader() {
+    return { 
+      config: ConfigReader.fromConfigs(
+        overrideBaseUrlConfigs(
+          await defaultConfigLoader())),
+    };
+  }
+
+  async load(options: {
+    config: ConfigApi
+  }): Promise<{
+    features: FrontendFeature[];
+  }> {
+    const { config } = options;
     const baseUrl = config.getString('backend.baseUrl');
-    const dynamicPlugins = config.get<DynamicPluginConfig>('dynamicPlugins');
+    this.#dynamicPluginsConfig = extractDynamicConfig(config.get<DynamicPluginConfig>('dynamicPlugins'));
+    const scopedConfig = getScopedConfig(this.#dynamicPluginsConfig);
+
     try {
       const frontendPluginManifests: {
         [key: string]: { name: string; manifestLocation: string };
       } = await (
         await fetch(`${baseUrl}/api/scalprum/plugins`)
       ).json();
-
-      const dynamicPluginsConfig = extractDynamicConfig(dynamicPlugins);
-      const scopedConfig = getScopedConfig(dynamicPluginsConfig);
 
       if (!(window as any).__load_plugin_entry__) {
         (window as any).__load_plugin_entry__ = (pluginName: string, entryModule: any) => {
@@ -119,15 +138,13 @@ export const dynamicFrontendFeaturesLoader: CreateAppFeatureLoader = {
         return {
           name: m.name,
           entry: m.manifestLocation.replace(/plugin-manifest.json$/, entry),
-          type: 'jsonp',          
+          type: 'jsonp',
         } as Parameters<typeof init>[0]['remotes'][0];
       }));
 
       registerRemotes(remotes);
 
       const features: FrontendFeature[] = [];
-
-      const remotePlugins: RemotePlugins = {};
 
       // eslint-disable-next-line guard-for-in
       for (const scope in scopedConfig) {
@@ -152,24 +169,31 @@ export const dynamicFrontendFeaturesLoader: CreateAppFeatureLoader = {
               `Module ${mod} of dynamic plugin ${scope} loaded from ${frontendPluginManifests[scope]}`,
             );
 
-            remotePlugins[scope] = remotePlugins[scope] || {};
-            remotePlugins[scope][mod] = module;
+            this.#remotePlugins[scope] = this.#remotePlugins[scope] || {};
+            this.#remotePlugins[scope][mod] = module;
           }
         }
       }
 
       const renderIcon = (iconName: string) => (() => compatWrapper(<MenuIcon icon={iconName} />)) as IconComponent;
 
+
+      enum DefaultTheme {
+        light,
+        dark,
+      }
+
+      const overriddenThemes: (keyof typeof DefaultTheme)[] = [];
+
       // eslint-disable-next-line guard-for-in
       for (const scope in scopedConfig) {
-        if (remotePlugins[scope] === undefined) {
+        if (this.#remotePlugins[scope] === undefined) {
           continue;
         }
-        
         const backstagePlugins: Array<BackstagePlugin<{}>> = [];
         const pluginModule = Object.values(scopedConfig[scope]).find(c => c.pluginModules.length > 0)?.pluginModules?.[0]?.module;
         if (pluginModule) {
-          const remoteBackstagePlugins = Object.values(remotePlugins[scope]?.[pluginModule] ?? {})?.filter(
+          const remoteBackstagePlugins = Object.values(this.#remotePlugins[scope]?.[pluginModule] ?? {})?.filter(
             imported => {
               const prototype = Object.getPrototypeOf(imported);
               return (
@@ -186,7 +210,7 @@ export const dynamicFrontendFeaturesLoader: CreateAppFeatureLoader = {
             }) as BackstagePlugin<{}>[];
 
           remoteBackstagePlugins.forEach(rp => {
-            if (! backstagePlugins.some(p => p.getId() === rp.getId())) {
+            if (!backstagePlugins.some(p => p.getId() === rp.getId())) {
               backstagePlugins.push(rp);
             }
           });
@@ -202,7 +226,7 @@ export const dynamicFrontendFeaturesLoader: CreateAppFeatureLoader = {
         const pluginLegacyFactories = backstagePlugins.flatMap(p => [...p.getApis()]);
         const apiFactories = [
           ...Object.values(scopedConfig[scope])
-            .flatMap(cfg => cfg.apiFactories.map(f => remotePlugins[f.scope]?.[f.module]?.[f.importName] as AnyApiFactory
+            .flatMap(cfg => cfg.apiFactories.map(f => this.#remotePlugins[f.scope]?.[f.module]?.[f.importName] as AnyApiFactory
             )).filter(f => f && !pluginLegacyFactories.some(pf => pf.api.id === f.api.id)),
           ...pluginLegacyFactories
         ]
@@ -213,12 +237,12 @@ export const dynamicFrontendFeaturesLoader: CreateAppFeatureLoader = {
         const referencedRoutes: AnyRoutes = {};
 
         const dynamicRouteItems = Object.values(scopedConfig[scope])
-          .flatMap(cfg => cfg.dynamicRoutes.flatMap(r => {  
+          .flatMap(cfg => cfg.dynamicRoutes.flatMap(r => {
             if (!r.menuItem) {
               return [undefined];
             }
-            const Page = remotePlugins[r.scope]?.[r.module]?.[r.importName] as (ComponentType<{ children?: ReactNode; }> | undefined);
-            if (! Page) {
+            const Page = this.#remotePlugins[r.scope]?.[r.module]?.[r.importName] as (ComponentType<{ children?: ReactNode; }> | undefined);
+            if (!Page) {
               return [undefined];
             }
             const element = <Page />;
@@ -245,11 +269,11 @@ export const dynamicFrontendFeaturesLoader: CreateAppFeatureLoader = {
                   },
                 }));
               } else {
-                const MenuItemComponent = remotePlugins[r.scope]?.[r.menuItem.module ?? r.module]?.[r.menuItem.importName];
+                const MenuItemComponent = this.#remotePlugins[r.scope]?.[r.menuItem.module ?? r.module]?.[r.menuItem.importName];
                 if (MenuItemComponent !== undefined) {
                   menuItemExtension.push(NavComponentBlueprint.make({
                     params: {
-                      Component: MenuItemComponent as React.ComponentType<{}>, 
+                      Component: MenuItemComponent as React.ComponentType<{}>,
                       routeRef: routeRef,
                       config: r.menuItem?.config?.props,
                     },
@@ -265,36 +289,67 @@ export const dynamicFrontendFeaturesLoader: CreateAppFeatureLoader = {
               convertLegacyPageExtension(Page, {
                 defaultPath: r.path
               }),
-              ...menuItemExtension, 
+              ...menuItemExtension,
             ];
-          }));
+          })).filter((e): e is ExtensionDefinition<any> => e !== undefined);
+
+        type ResolvedIcon = {
+          name: string,
+          component: IconComponent,
+        };
+        const icons: ResolvedIcon[] = Object.values(scopedConfig[scope])
+          .flatMap(cfg => cfg.appIcons.map(i => {
+            const importedIcon = this.#remotePlugins[i.scope]?.[i.module]?.[i.importName];
+            if (!importedIcon) {
+              return undefined;
+            }
+            return {
+              name: i.name,
+              component: importedIcon as IconComponent,
+            };
+          })).filter((i): i is ResolvedIcon => i !== undefined);
 
         const themes = Object.values(scopedConfig[scope])
-        .flatMap(cfg => cfg.themes.map(t => {
-          const importedThemeProvider = remotePlugins[t.scope]?.[t.module]?.[t.importName];
-          if (!importedThemeProvider) {
-            return undefined;
-          }
-          return ThemeBlueprint.make({
-            name: t.id,
-            params: {
-              theme: {
-                id: t.id,
-                title: t.title,
-                icon: compatWrapper(<MenuIcon icon={t.icon} />),
-                variant: t.variant,
-                Provider: importedThemeProvider as (props: {
-                  children: React.ReactNode;
-                }) => JSX.Element | null,
-              },
+          .flatMap(cfg => cfg.themes.map(t => {
+            const importedThemeProvider = this.#remotePlugins[t.scope]?.[t.module]?.[t.importName];
+            if (!importedThemeProvider) {
+              return undefined;
             }
-          });
-      }))
+
+            const themeName = t.id;
+            if (themeName in DefaultTheme) {
+              overriddenThemes.push(themeName as keyof typeof DefaultTheme);
+            }
+
+            return ThemeBlueprint.make({
+              name: t.id,
+              params: {
+                theme: {
+                  id: t.id,
+                  title: t.title,
+                  icon: compatWrapper(<MenuIcon icon={t.icon} />),
+                  variant: t.variant,
+                  Provider: importedThemeProvider as (props: {
+                    children: React.ReactNode;
+                  }) => JSX.Element | null,
+                },
+              }
+            });
+          })).filter((e): e is ExtensionDefinition<any> => e !== undefined);
 
         const extensions: ExtensionDefinition[] = [
           ...apiFactories,
-          ...dynamicRouteItems.filter((e): e is ExtensionDefinition<any> => e !== undefined),
-          ...themes.filter((e): e is ExtensionDefinition<any> => e !== undefined),
+          ...dynamicRouteItems,
+          ...themes,
+          ...icons.length === 0 ? [] :
+            [IconBundleBlueprint.make({
+              name: `${scope}-appIcons`,
+              params: {
+                icons: Object.fromEntries(icons.map(i => {
+                  return [i.name, i.component];
+                })),
+              },
+            })],
         ];
         const pluginsRoutes = convertLegacyRouteRefs<LegacyAnyRoutes>(Object.assign(
           {} as LegacyAnyRoutes,
@@ -305,7 +360,7 @@ export const dynamicFrontendFeaturesLoader: CreateAppFeatureLoader = {
           ...pluginsRoutes,
           ...Object.fromEntries(
             Object.entries(referencedRoutes)
-            .filter(([_, rrr]) => ! pluginsRouteRefs.includes(rrr))
+              .filter(([_, rrr]) => !pluginsRouteRefs.includes(rrr))
           ),
         };
 
@@ -314,7 +369,7 @@ export const dynamicFrontendFeaturesLoader: CreateAppFeatureLoader = {
           ...backstagePlugins.map(p => p.externalRoutes),
         ));
 
-        const plugin = 
+        const plugin =
           createFrontendPlugin({
             id: scope,
             extensions,
@@ -326,7 +381,14 @@ export const dynamicFrontendFeaturesLoader: CreateAppFeatureLoader = {
         features.push(plugin);
       }
 
-      features.push(customAppPlugin);
+      features.push(appPlugin.withOverrides({
+        extensions: [
+          customNavBar,
+          ...overriddenThemes.map(t =>
+            appPlugin.getExtension(`theme:app/${t}`).override({ disabled: true }),
+          ),
+        ],
+      }));
 
       return { features: features };
     } catch (err) {
@@ -337,8 +399,49 @@ export const dynamicFrontendFeaturesLoader: CreateAppFeatureLoader = {
       );
       return { features: [] };
     }
-  },
-};
+  }
+
+  bindRoutes(context: { bind: CreateAppRouteBinder }): void {    
+    if (!this.#dynamicPluginsConfig) {
+      return;
+    }
+    const { bind } = context;
+    const { routeBindingTargets, routeBindings } = this.#dynamicPluginsConfig;
+    const resolvedRouteBindingTargets = Object.fromEntries(
+      routeBindingTargets?.reduce<[string, BackstagePlugin<{}>][]>(
+        (acc, { name, importName, scope, module }) => {
+          const plugin = this.#remotePlugins[scope]?.[module]?.[importName];
+          if (plugin) {
+            acc.push([name, plugin as BackstagePlugin<{}>]);
+          } else {
+            // eslint-disable-next-line no-console
+            console.warn(
+              `Plugin ${scope} is not configured properly: ${module}.${importName} not found, ignoring routeBindings target: ${name}`,
+            );
+          }
+          return acc;
+        },
+        [],
+      ) ?? []);
+
+    const bindAsOldBind: AppRouteBinder = (externalRoutes, targetRoutes) => {
+      type TargetRoute = false | LegacyRouteRef<AnyRouteRefParams> | undefined;
+      bind(
+        convertLegacyRouteRefs(externalRoutes), 
+        Object.fromEntries(
+          Object.entries<TargetRoute>(targetRoutes).map(
+            ([key, value]) => [
+              key,
+              value ? convertLegacyRouteRef(value) : value,
+            ]
+          )
+        ) as any,
+      )
+    };
+
+    bindAppRoutes(bindAsOldBind, resolvedRouteBindingTargets, routeBindings);
+  }
+}
 
 function getScopedConfig(dynamicConfig: DynamicConfig) {
   const {

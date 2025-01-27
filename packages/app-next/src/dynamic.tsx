@@ -33,6 +33,8 @@ import appPlugin from '@backstage/plugin-app';
 import { ConfigReader } from '@backstage/config';
 import { overrideBaseUrlConfigs } from '@internal/app-utils';
 import { AppRouteBinder, defaultConfigLoader } from '@backstage/core-app-api';
+import { FieldExtensionOptions } from '@backstage/plugin-scaffolder-react';
+import { FormFieldBlueprint, createFormField } from '@backstage/plugin-scaffolder-react/alpha';
 
 export class NewFrontendBridge implements CreateAppFeatureLoader {
   #dynamicPluginsConfig?: DynamicConfig;
@@ -336,6 +338,40 @@ export class NewFrontendBridge implements CreateAppFeatureLoader {
               }
             });
           })).filter((e): e is ExtensionDefinition<any> => e !== undefined);
+
+        const scaffolderFieldExtensions = Object.values(scopedConfig[scope])
+          .flatMap(cfg => cfg.scaffolderFieldExtensions.map(e => {
+            const ImportedExtension = this.#remotePlugins[e.scope]?.[e.module]?.[e.importName] as ((...args: any[]) => any);
+            if (!ImportedExtension) {
+              return undefined;
+            }
+
+            if (!ImportedExtension) {
+              return [undefined];
+            }
+            const element = <ImportedExtension />;
+            const fieldExtensionOptions = getComponentData<FieldExtensionOptions>(
+              element,
+              'scaffolder.extensions.field.v1',
+            );
+
+            if (fieldExtensionOptions === undefined) {
+              return undefined;
+            }
+
+            return FormFieldBlueprint.make({
+              name: e.importName,
+              params: {
+                field: async () => createFormField({
+                  name: fieldExtensionOptions.name,
+                  component: fieldExtensionOptions.component,
+                  validation: fieldExtensionOptions.validation,
+                  schema: fieldExtensionOptions.schema,
+                }),
+              },
+            });
+          })).filter((e): e is ExtensionDefinition<any> => e !== undefined);
+
 
         const extensions: ExtensionDefinition[] = [
           ...apiFactories,

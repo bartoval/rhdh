@@ -43,6 +43,7 @@
     "@internal/app-utils": "*",
     "@internal/backstage-plugin-dynamic-home-page": "*",
     "@internal/plugin-dynamic-plugins-info": "*",
+    "@internal/plugin-utils": "*",
     "@janus-idp/backstage-plugin-rbac-common": "1.12.0",
     "@mui/icons-material": "5.16.7",
     "@mui/material": "5.16.7",
